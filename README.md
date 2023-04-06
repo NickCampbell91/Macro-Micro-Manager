@@ -8,7 +8,7 @@ Macro Micro Manager is a user-friendly, tkinter-based Python application designe
 - Add, remove, and reorder actions
 - Save and load macro configurations
 - Execute macros using a custom hotkey combination (default is Ctrl + 1)
-- Stop macro execution by pressing the 'Esc' key
+- Stop macro execution by using the hotkey again
 
 ## Instructions
 
