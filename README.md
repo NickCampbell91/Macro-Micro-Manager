@@ -5,7 +5,7 @@ Macro Micro Manager is a user-friendly, tkinter-based Python application designe
 ## Features
 
 - Create custom macro actions such as clicks, key presses, and wait times
-- Add, remove, and reorder actions
+- Add and remove actions
 - Save and load macro configurations
 - Execute macros using a custom hotkey combination (default is Ctrl + 1)
 - Stop macro execution by using the hotkey again
