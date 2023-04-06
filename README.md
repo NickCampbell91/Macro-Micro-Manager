@@ -1,6 +1,6 @@
 # Macro Micro Manager
 
-Macro Micro Manager is a tkinter-based Python application for creating and executing custom macros with mouse and keyboard actions.
+Macro Micro Manager is a user-friendly, tkinter-based Python application designed for creating and executing custom macros consisting of mouse and keyboard actions. With an intuitive graphical interface, this powerful tool allows you to automate repetitive tasks, enhance productivity, and streamline your workflow by combining a series of mouse clicks, key presses, and wait times into a single macro.
 
 ## Features
 
