@@ -82,7 +82,7 @@ class App:
             "   Note: The key names are case-insensitive.\n"
         )
 
-        frame_bg_color = "#3a3a3a"  # This should match the background color of your window
+        frame_bg_color = "#3a3a3a" 
         instructions_frame = ttk.Frame(instructions_window, padding=20, style="Custom.TFrame")
         instructions_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -438,6 +438,6 @@ class App:
                 print("Reached the end of Return script")
                 self.root.after(1, self.process_queue)
 
-root = ThemedTk(theme="equilux")  # Use ThemedTk with the Equilux theme12223
+root = ThemedTk(theme="equilux")  # Use ThemedTk with the Equilux theme
 app = App(root)
 root.mainloop()
