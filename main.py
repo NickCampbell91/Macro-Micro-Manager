@@ -4,6 +4,7 @@ from ttkthemes import ThemedTk
 import time
 import keyboard
 from threading import Event
+from tkinter import messagebox
 from file_manager import FileManager
 from ttk_option_menu import TTKOptionMenu
 from validators import Validator
@@ -24,12 +25,12 @@ class App:
         self.hotkey = '1'  # Set the hotkey attribute before calling create_hotkey_input
         self.create_hotkey_input()
         self.stop_execution = False
-        self.root.bind('<Escape>', self.stop_execution_callback)
         self.last_key = None
         self.held_buttons = set()
         self.keyboard = keyboard
         self.setup_hotkey()
         self.validator = Validator()
+        self.special_key_map = Validator.get_special_key_map()
 
         style = ttk.Style()
         style.theme_use('equilux')
@@ -65,17 +66,37 @@ class App:
             "   - Click: Clicks the mouse at the specified coordinates.\n"
             "   - Press: Presses the specified key.\n"
             "   - Wait: Waits for the specified amount of time.\n"
-            "   - Return: Resets the macro to the spcified step.\n"
+            "   - Return: Resets the macro to the specified step.\n"
+            "     Note: Leaving the Repetitions box empty will achieve and endless loop\n"
             "3. Fill in the required fields for the selected action.\n"
             "4. Click 'Execute' to run the macro.\n"
             "5. Press 'Ctrl' + your hotkey (default is '1') to run the macro.\n"
-            "6. Click 'Stop' or press 'Esc' to stop the macro.\n"
+            "6. Click 'Stop' or press your hotkey again to stop the macro.\n"
             "7. Save your macro by clicking 'File' > 'Save'.\n"
             "8. Load a saved macro by clicking 'File' > 'Open'.\n"
+            "9. For 'Press' action, you can use the following special key names:\n"
+            "   - enter, up, down, left, right, backspace, tab, capslock,\n"
+            "     shift, ctrl, alt, space, esc, insert, delete, home, end,\n"
+            "     pageup, pagedown, numlock, scrolllock, printscreen, pause,\n"
+            "     f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12\n"
+            "   Note: The key names are case-insensitive.\n"
         )
 
-        instructions_label = ttk.Label(instructions_window, text=instructions_text, justify=tk.LEFT)
-        instructions_label.pack(padx=10, pady=10)
+        frame_bg_color = "#3a3a3a"  # This should match the background color of your window
+        instructions_frame = ttk.Frame(instructions_window, padding=20, style="Custom.TFrame")
+        instructions_frame.pack(fill=tk.BOTH, expand=True)
+
+        instructions_label = ttk.Label(
+            instructions_frame,
+            text=instructions_text,
+            justify=tk.LEFT,
+            background=frame_bg_color
+        )
+        instructions_label.pack(fill=tk.BOTH, expand=True)
+
+        # Set the custom style for the frame
+        style = ttk.Style()
+        style.configure("Custom.TFrame", background=frame_bg_color)
 
     # ROW-RELATED FUNCTIONS
 
@@ -112,7 +133,7 @@ class App:
         key_label.grid(row=self.rows.index(row), column=2)
         row["extra_widgets"].append(key_label)
 
-        key_entry = ttk.Entry(self.dropdown_frame, width=5)
+        key_entry = ttk.Entry(self.dropdown_frame, width=10)
         key_entry.grid(row=self.rows.index(row), column=3)
         row["extra_widgets"].append(key_entry)
 
@@ -135,7 +156,7 @@ class App:
         return_label.grid(row=self.rows.index(row), column=2)
         row["extra_widgets"].append(return_label)
 
-        entry = ttk.Entry(self.dropdown_frame, validate='key', validatecommand=(self.root.register(self.validator.validate_integer_range), '%P'), width=5)
+        entry = ttk.Entry(self.dropdown_frame, validate='key', validatecommand=(self.root.register(lambda input_str: self.validator.validate_integer_range(input_str, self.rows)), '%P'), width=5)
         entry.grid(row=self.rows.index(row), column=3)
         row["extra_widgets"].append(entry)
 
@@ -201,6 +222,7 @@ class App:
     # HOTKEY-RELATED FUNCTIONS
 
     def create_hotkey_input(self):
+        self.executing = False  # Add an attribute to track whether the macro is executing
         hotkey_label = ttk.Label(self.button_frame, text="Hotkey (ctrl+):")
         hotkey_label.grid(row=0, column=4, padx=5, pady=5)
 
@@ -215,7 +237,13 @@ class App:
         self.setup_hotkey()
 
     def setup_hotkey(self):
-        keyboard.add_hotkey(f'ctrl+{self.hotkey}', self.execute)
+        keyboard.add_hotkey(f'ctrl+{self.hotkey}', self.toggle_execution)
+
+    def toggle_execution(self):
+        if self.executing:
+            self.stop_execution_button()
+        else:
+            self.execute()
 
     # MACRO-RELATED FUNCTIONS
 
@@ -241,26 +269,69 @@ class App:
             keyboard.release('right')
 
     def press(self, key, action):
-        # Convert key to the corresponding special key code
-        special_key_map = {
-            'Enter': 'enter',
-            'ArrowUp': 'up',
-            'ArrowDown': 'down',
-            'ArrowLeft': 'left',
-            'ArrowRight': 'right',
-        }
-        key = special_key_map.get(key, key)
+        key = self.convert_special_key(key)
+
+        is_uppercase = key.isalpha() and key.isupper()
+        if is_uppercase:
+            keyboard.press('shift')
 
         if action == 'Hold':
             keyboard.press(key)
         elif action == 'Release':
             keyboard.release(key)
+        else:  # action is 'Press'
+            keyboard.press(key)
+            keyboard.release(key)
+
+        if is_uppercase:
+            keyboard.release('shift')
+
+    def convert_special_key(self, key):
+        special_key_map = {
+            'enter': 'enter',
+            'up': 'up',
+            'down': 'down',
+            'left': 'left',
+            'right': 'right',
+            'backspace': 'backspace',
+            'tab': 'tab',
+            'capslock': 'caps_lock',
+            'shift': 'shift',
+            'ctrl': 'control',
+            'alt': 'alt',
+            'space': 'space',
+            'esc': 'escape',
+            'insert': 'insert',
+            'delete': 'delete',
+            'home': 'home',
+            'end': 'end',
+            'pageup': 'page_up',
+            'pagedown': 'page_down',
+            'numlock': 'num_lock',
+            'scrolllock': 'scroll_lock',
+            'printscreen': 'print_screen',
+            'pause': 'pause',
+            'f1': 'f1',
+            'f2': 'f2',
+            'f3': 'f3',
+            'f4': 'f4',
+            'f5': 'f5',
+            'f6': 'f6',
+            'f7': 'f7',
+            'f8': 'f8',
+            'f9': 'f9',
+            'f10': 'f10',
+            'f11': 'f11',
+            'f12': 'f12',
+        }
+        return special_key_map.get(key.lower(), key)
 
     def stop_execution_button(self):
         self.stop_execution_callback(None)
 
     def stop_execution_callback(self, event):
         self.stop_execution = True
+        self.executing = False  # Set executing to False when stopping
         self.release_held_buttons()  # Release held buttons before stopping the execution
         self.root.unbind('<Escape>')
         print("Execution stopped.")
@@ -282,6 +353,7 @@ class App:
 
     def execute(self):
         print("Execution started.")
+        self.executing = True  # Set executing to True when starting
         self.stop_execution = False
         self.action_queue = [(0, None)]
         self.root.after(1000, self.process_queue)
@@ -314,7 +386,7 @@ class App:
             for widget in row["extra_widgets"]:
                 if isinstance(widget, ttk.Entry):
                     extra_values.append(widget.get())
-                elif isinstance(widget, ttk.OptionMenu):
+                elif isinstance(widget, TTKOptionMenu):
                     text = widget["text"]
                     if text in ['Up', 'Down']:
                         extra_values.append(text)
@@ -326,22 +398,14 @@ class App:
 
             if main_value == 'Press':
                 key = extra_values[0]
-                action = extra_values[1]  # Get the Press/Hold/Release action from the dropdown1
-                if action == 'Hold':
-                    print(f"Holding {key}")
-                    self.held_buttons.add(key)
-                    self.hold_key(key)
-                elif action == 'Release':
-                    print(f"Releasing {key}")
-                    keyboard.release(key)
-                    self.held_buttons.discard(key)
-                else:  # action is 'Press'
-                    print(f"Pressing {key}")
-                    if key.isalnum():
-                        keyboard.write(key)
-                    else:
-                        keyboard.press(key)
-                        keyboard.release(key)
+                if not Validator.validate_key_input(key, self.special_key_map):
+                    messagebox.showerror("Invalid Input", f"Invalid key input: {key}. Please enter a single key or a valid special key.")
+                    return
+
+                key = self.convert_special_key(key)  # Convert the key
+                action = extra_values[1]  # Get the Press/Hold/Release action from the dropdown
+                print(f"{action} {key}")
+                self.press(key, action)
 
             elif main_value == 'Wait':
                 print(f"Waiting {extra_values[0]} seconds")
@@ -349,6 +413,7 @@ class App:
                 return
 
             elif main_value == 'Return':
+                print("Entered 'Return' case")
                 if self.last_key is not None:
                     print(f"Returning to step {extra_values[0]}")
                     self.press(self.last_key, 'Up')
@@ -361,15 +426,18 @@ class App:
                     repeat_count = -1
 
                 if repeat_count != 0:
+                    print(f"Repeating step {extra_values[0]} (repeat count: {repeat_count})")
                     repeat_count -= 1
                     self.root.after(1, self._execute_step, self.rows.index(return_row), repeat_count)
                     return
 
             if row_index + 1 < len(self.rows):
+                print(f"Moving to next row ({row_index + 1})")
                 self.root.after(1, self._execute_step, row_index + 1, repeat_count)
             else:
+                print("Reached the end of Return script")
                 self.root.after(1, self.process_queue)
 
-root = ThemedTk(theme="equilux")  # Use ThemedTk with the Equilux theme
+root = ThemedTk(theme="equilux")  # Use ThemedTk with the Equilux theme12223
 app = App(root)
 root.mainloop()
